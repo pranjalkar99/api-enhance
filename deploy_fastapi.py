@@ -3,6 +3,8 @@ import torchvision.transforms.functional as TF
 import numpy as np
 from PIL import Image as PILImage
 import os
+import boto3
+import requests
 from io import BytesIO
 import base64
 
@@ -15,6 +17,10 @@ app = FastAPI()  # FastAPI App
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 checkpoint_filepath = "./pretrained_models/adobe_dpe/curl_validpsnr_23.073045286204017_validloss_0.0701291635632515_testpsnr_23.584083321292365_testloss_0.061363041400909424_epoch_510_model.pt"
 output_folder = "test_output"
+
+
+s3 = boto3.client('s3')
+s3_resource = boto3.resource('s3')
 
 if not os.path.exists(output_folder):
     os.makedirs(output_folder)
@@ -101,7 +107,38 @@ async def enhance(img: UploadFile = File(...), name: str = Form(...)):
         error_msg = f"Inference error: {str(e)}"
         return {"error": error_msg}, 400
 
+@app.post('/enhance-bucket')
+async def enhance_bucket(bucket_link: str):
+    """
+    Download images from the given bucket link, apply enhancement, store in another bucket, and delete the files
+    """
+    try:
+        # Download images from the given bucket link
+        bucket_name = bucket_link.split('/')[2]
+        prefix = '/'.join(bucket_link.split('/')[3:])
+        objects = s3.list_objects_v2(Bucket=bucket_name, Prefix=prefix)['Contents']
+        for obj in objects:
+            key = obj['Key']
+            ext = key.split('.')[-1].lower()
+            if ext not in ['jpg', 'jpeg', 'png', 'dng']:
+                continue
+            response = s3.get_object(Bucket=bucket_name, Key=key)
+            img_data = response['Body'].read()
 
+            # Apply enhancement
+            # ... your enhancement code here ...
+
+            # Store the enhanced image in another bucket
+            output_bucket_name = 'enhanced-images'
+            output_key = f"{os.path.basename(key).replace('.', '_enhanced.')}"
+            s3_resource.Bucket(output_bucket_name).put_object(Key=output_key, Body=img_data)
+
+            # Delete the original image
+            s3.delete_object(Bucket=bucket_name, Key=key)
+
+        return {"message": "Images enhanced and stored successfully."}
+    except Exception as e:
+        return {"error": f"Error enhancing images: {e}"}, 400
 
 if __name__ == "__main__":
     import uvicorn

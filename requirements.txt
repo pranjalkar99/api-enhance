@@ -7,3 +7,7 @@ matplotlib
 imageio
 Pillow
 scikit-image
+fastapi
+uvicorn
+boto3
+

@@ -11,3 +11,4 @@ fastapi
 uvicorn
 boto3
 rawpy
+python-multipart

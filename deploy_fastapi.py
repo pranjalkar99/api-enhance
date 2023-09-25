@@ -102,7 +102,7 @@ async def enhance(img: UploadFile = File(...), name: str = Form(...)):
                 buffer.seek(0)
                 data = base64.b64encode(buffer.read()).decode()
 
-            return {'img': data, "name": name.replace('.', '_enhanced.'),"file":output_img}
+            return {'img': data, "name": name.replace('.', '_enhanced.')}
     except Exception as e:
         error_msg = f"Inference error: {str(e)}"
         return {"error": error_msg}, 400

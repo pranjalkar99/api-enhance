@@ -10,4 +10,4 @@ scikit-image
 fastapi
 uvicorn
 boto3
-
+rawpy
